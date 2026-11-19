@@ -15,16 +15,33 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Zip'i ac
-        run: unzip -q BeybiOS.zip
+      - name: Zip'i bul ve ac
+        run: |
+          echo "Depodaki dosyalar:"
+          ls -la
+          ZIP=$(find . -iname '*.zip' -not -path './.git/*' | head -n 1)
+          if [ -z "$ZIP" ]; then
+            echo "HATA: depoda hic zip dosyasi yok. Code sekmesinde BeybiOS.zip gorunmeli."
+            exit 1
+          fi
+          echo "Bulunan zip: $ZIP"
+          mkdir proje
+          unzip -q "$ZIP" -d proje
+          GRADLEW=$(find proje -name gradlew | head -n 1)
+          if [ -z "$GRADLEW" ]; then
+            echo "HATA: zip icinde gradlew yok. Zip icindekiler:"
+            ls -R proje | head -50
+            exit 1
+          fi
+          echo "PROJE_DIZINI=$(dirname "$GRADLEW")" >> "$GITHUB_ENV"
 
       - name: Debug APK derle
-        working-directory: BeybiOS
         run: |
+          cd "$PROJE_DIZINI"
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
       - uses: actions/upload-artifact@v4
         with:
           name: BeybiOS-debug-apk
-          path: BeybiOS/app/build/outputs/apk/debug/app-debug.apk
+          path: proje/**/app-debug.apk
